@@ -1,0 +1,7 @@
+{
+  "name": "Sandras Historia",
+  "description": "Ett kreativt verktyg för att skapa bilder och text med hjälp av AI. Ladda upp egna bilder, generera nya och designa fritt.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
