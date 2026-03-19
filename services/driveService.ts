@@ -38,6 +38,17 @@ export const fetchDriveFiles = async (
   return data.files || [];
 };
 
+export const fetchSharedDrives = async (accessToken: string): Promise<any[]> => {
+  const response = await fetch('https://www.googleapis.com/drive/v3/drives', {
+    headers: { 'Authorization': `Bearer ${accessToken}` }
+  });
+  if (!response.ok) {
+    throw new Error('Kunde inte hämta delade enheter');
+  }
+  const data = await response.json();
+  return data.drives || [];
+};
+
 export const fetchFileBlob = async (accessToken: string, fileId: string): Promise<Blob> => {
   const url = `${DRIVE_API_URL}/files/${fileId}?alt=media`;
     

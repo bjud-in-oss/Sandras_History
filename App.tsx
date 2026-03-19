@@ -30,7 +30,8 @@ import {
   Info,
   ChevronLeft,
   ChevronRight,
-  Plus
+  Plus,
+  Trash2
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -454,6 +455,10 @@ function App() {
               }
               setShowDrivePicker(false);
             }}
+            onAddEmptyPage={() => {
+              actions.addPage();
+              setShowDrivePicker(false);
+            }}
             selectedIds={[]}
             onClose={() => setShowDrivePicker(false)}
             browserState={browserState}
@@ -554,6 +559,14 @@ function App() {
         {/* BOTTOM PAGE NAVIGATION */}
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-gray-900/90 backdrop-blur-md border border-gray-800 px-4 py-2 rounded-full shadow-2xl z-40">
             <button 
+                onClick={() => actions.removePage(state.currentPageId)}
+                disabled={state.pages.length === 1}
+                className="p-2 bg-gray-800 text-gray-400 rounded-full hover:bg-gray-700 hover:text-red-400 disabled:opacity-30 disabled:hover:bg-gray-800 transition-all"
+            >
+                <Trash2 className="w-5 h-5" />
+            </button>
+            <div className="w-px h-6 bg-gray-700 mx-1"></div>
+            <button 
                 onClick={() => {
                     const idx = state.pages.findIndex(p => p.id === state.currentPageId);
                     if (idx > 0) actions.setCurrentPage(state.pages[idx - 1].id);
@@ -578,7 +591,7 @@ function App() {
             </button>
             <div className="w-px h-6 bg-gray-700 mx-1"></div>
             <button 
-                onClick={actions.addPage} 
+                onClick={() => setShowDrivePicker(true)} 
                 className="p-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-500/20"
             >
                 <Plus className="w-5 h-5" />

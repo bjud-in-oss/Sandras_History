@@ -1,6 +1,6 @@
 
 import { DriveFile, FileType } from '../types';
-import { fetchDriveFiles } from '../services/driveService';
+import { fetchDriveFiles, fetchSharedDrives } from '../services/driveService';
 import React, { useState, useEffect, useRef } from 'react';
 import AppLogo from './AppLogo';
 
@@ -8,6 +8,7 @@ interface FileBrowserProps {
   accessToken: string;
   onRequestAccess: () => void; // New prop to trigger auth flow
   onAddFiles: (files: DriveFile[]) => void;
+  onAddEmptyPage: () => void; // New prop
   selectedIds: string[]; 
   onClose: () => void;
   
@@ -24,6 +25,7 @@ const FileBrowser: React.FC<FileBrowserProps> = ({
   accessToken, 
   onRequestAccess,
   onAddFiles, 
+  onAddEmptyPage,
   onClose,
   browserState,
   onUpdateState
@@ -47,24 +49,6 @@ const FileBrowser: React.FC<FileBrowserProps> = ({
     }
   }, [currentFolder, activeTab, currentDriveId, hasAccess]);
 
-  const loadDriveFiles = async () => {
-    if (!hasAccess) return;
-    
-    setLoading(true);
-    try {
-        const driveIdToUse = undefined;
-        const folderIdToUse = currentFolder;
-
-        const data = await fetchDriveFiles(accessToken, folderIdToUse, driveIdToUse);
-        setFiles(data);
-    } catch (err) {
-      console.error(err);
-      setFiles([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const updateState = (updates: Partial<typeof browserState>) => {
     onUpdateState({ ...browserState, ...updates });
   };
@@ -78,7 +62,34 @@ const FileBrowser: React.FC<FileBrowserProps> = ({
       return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i - 1];
   };
 
-  // --- Actions ---
+  const switchTab = (tab: 'local' | 'drive' | 'shared') => {
+    if (tab === 'shared') {
+      updateState({ activeTab: 'shared', currentDriveId: null, currentFolder: 'root', breadcrumbs: [{id: 'root-drives', name: 'Delade Enheter'}] });
+    } else if (tab === 'drive') {
+      updateState({ activeTab: 'drive', currentDriveId: null, currentFolder: 'root', breadcrumbs: [{id: 'root', name: 'Min Drive'}] });
+    } else {
+      updateState({ activeTab: 'local', currentDriveId: null, currentFolder: 'root', breadcrumbs: [] });
+    }
+  };
+
+  const loadDriveFiles = async () => {
+    setLoading(true);
+    try {
+      if (activeTab === 'shared' && !currentDriveId) {
+        // Fetch shared drives
+        const drives = await fetchSharedDrives(accessToken);
+        setFiles(drives.map((d: any) => ({ id: d.id, name: d.name, type: FileType.FOLDER, size: 0, modifiedTime: '', isLocal: false })));
+      } else {
+        // Fetch files in folder or drive
+        const folderFiles = await fetchDriveFiles(currentFolder, activeTab === 'shared' ? currentDriveId : undefined);
+        setFiles(folderFiles);
+      }
+    } catch (error) {
+      console.error('Error loading drive files:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleToggleFile = (file: DriveFile) => {
     if (file.type === FileType.FOLDER) {
@@ -123,16 +134,7 @@ const FileBrowser: React.FC<FileBrowserProps> = ({
   };
 
   const handleAddEmptySource = () => {
-    const empty: DriveFile = {
-      id: `empty-${Date.now()}`,
-      name: 'Ny källa',
-      type: FileType.TEXT,
-      size: 0,
-      modifiedTime: new Date().toLocaleDateString(),
-      description: '',
-      isLocal: true
-    };
-    onAddFiles([empty]); 
+    onAddEmptyPage();
     onClose();
   };
 
@@ -176,18 +178,6 @@ const FileBrowser: React.FC<FileBrowserProps> = ({
     onClose();
   };
 
-  const switchTab = (tab: 'local' | 'drive') => {
-    let newBreadcrumbs = [{id: 'root', name: 'Min Enhet'}];
-    if (tab === 'local') newBreadcrumbs = [{id: 'root', name: 'Lokal'}];
-
-    updateState({
-      activeTab: tab,
-      currentFolder: 'root',
-      currentDriveId: null,
-      breadcrumbs: newBreadcrumbs
-    });
-  };
-
   const isAllSelected = files.length > 0 && files.filter(f => f.type !== FileType.FOLDER).every(f => localSelection.some(s => s.id === f.id));
 
   // Render Logic for "Connect Drive" states
@@ -211,38 +201,41 @@ const FileBrowser: React.FC<FileBrowserProps> = ({
   );
 
   return (
-    <div className="flex flex-col h-full bg-white text-slate-900">
+    <div className="flex flex-col h-full bg-gray-900 text-gray-200">
       {/* Header with "Samla minnen" + Icon */}
-      <div className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4 border-b border-slate-100">
+      <div className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4 border-b border-gray-800">
         <div className="flex items-center space-x-3">
              <div className="w-8 h-8">
                 <AppLogo variant="phase1" className="w-full h-full" />
              </div>
-             <h2 className="text-lg md:text-xl font-serif font-bold text-slate-800">Samla minnen</h2>
+             <h2 className="text-lg md:text-xl font-serif font-bold text-gray-100">Samla minnen</h2>
         </div>
         
         <div className="flex items-center space-x-2">
-           <button onClick={handleAddEmptySource} className="hidden md:inline-block px-3 py-1.5 text-xs font-bold bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">
+           <button onClick={onAddEmptyPage} className="hidden md:inline-block px-3 py-1.5 text-xs font-bold bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors">
+             + Skapa tom sida
+           </button>
+           <button onClick={handleAddEmptySource} className="hidden md:inline-block px-3 py-1.5 text-xs font-bold bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors">
              + Tom källa
            </button>
-           <button onClick={handlePasteText} className="hidden md:inline-block px-3 py-1.5 text-xs font-bold bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">
+           <button onClick={handlePasteText} className="hidden md:inline-block px-3 py-1.5 text-xs font-bold bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors">
              <i className="fas fa-paste mr-1"></i> Klistra in
            </button>
-           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors">
+           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-800 text-gray-400 hover:text-gray-100 transition-colors">
              <i className="fas fa-times text-lg"></i>
            </button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-100">
-        {['local', 'drive'].map((tab: any) => (
+      <div className="flex border-b border-gray-800">
+        {['local', 'drive', 'shared'].map((tab: any) => (
           <button 
             key={tab}
             onClick={() => switchTab(tab)}
-            className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === tab ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+            className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === tab ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
           >
-            {tab === 'local' ? 'Lokal' : 'Min Drive'}
+            {tab === 'local' ? 'Lokal' : tab === 'drive' ? 'Min Drive' : 'Delad Drive'}
           </button>
         ))}
       </div>
