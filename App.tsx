@@ -6,13 +6,14 @@ import { CanvasWorkspace } from './components/CanvasWorkspace';
 import { PropertiesPanel } from './components/PropertiesPanel';
 import { HelpBubble } from './components/HelpBubble';
 import { LandingPage } from './components/LandingPage';
-import { DriveImagePicker } from './components/DriveImagePicker';
+import FileBrowser from './components/FileBrowser';
 import { ChatMessage } from './types';
 import { useEditorState } from './hooks/useEditorState';
 import { useProjectSystem } from './hooks/useProjectSystem';
 import { useGeminiLive } from './hooks/useGeminiLive';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { CANVAS_PRESETS } from './constants/presets';
+import { fetchFileBlob } from './services/driveService';
 
 import { 
   Undo2, 
@@ -73,6 +74,12 @@ function App() {
   const [isBubbleExpanded, setIsBubbleExpanded] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(true);
   const [showDrivePicker, setShowDrivePicker] = useState(false);
+  const [browserState, setBrowserState] = useState({
+    currentFolder: 'root',
+    currentDriveId: null,
+    breadcrumbs: [{id: 'root', name: 'Min Enhet'}],
+    activeTab: 'drive' as 'local' | 'drive' | 'shared'
+  });
   
   const [activeSidebar, setActiveSidebar] = useState<'MEDIA' | 'AI' | 'LAYERS' | 'CANVAS' | 'ARCHIVE' | null>(null);
   
@@ -419,24 +426,38 @@ function App() {
         />
 
         {showDrivePicker && (
-          <DriveImagePicker 
+          <FileBrowser 
             accessToken={accessToken || ''} 
-            onClose={() => setShowDrivePicker(false)}
-            onSelectImage={(blobUrl) => {
-              actions.addElement({
-                id: crypto.randomUUID(),
-                type: 'image',
-                x: 400,
-                y: 300,
-                rotation: 0,
-                width: 300,
-                height: 300,
-                src: blobUrl,
-                aspectRatio: 1,
-                constrainProportions: true
-              });
+            onRequestAccess={handleLogin}
+            onAddFiles={async (files) => {
+              // Convert DriveFile to CanvasElement
+              for (const file of files) {
+                let blobUrl = file.blobUrl;
+                if (!blobUrl && file.id && accessToken) {
+                  const blob = await fetchFileBlob(accessToken, file.id);
+                  blobUrl = URL.createObjectURL(blob);
+                }
+                if (blobUrl) {
+                  actions.addElement({
+                    id: crypto.randomUUID(),
+                    type: 'image',
+                    x: 400,
+                    y: 300,
+                    rotation: 0,
+                    width: 300,
+                    height: 300,
+                    src: blobUrl,
+                    aspectRatio: 1,
+                    constrainProportions: true
+                  });
+                }
+              }
               setShowDrivePicker(false);
             }}
+            selectedIds={[]}
+            onClose={() => setShowDrivePicker(false)}
+            browserState={browserState}
+            onUpdateState={setBrowserState}
           />
         )}
         
