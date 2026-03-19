@@ -5,6 +5,7 @@ import { Toolbar } from './components/Toolbar';
 import { CanvasWorkspace } from './components/CanvasWorkspace';
 import { PropertiesPanel } from './components/PropertiesPanel';
 import { HelpBubble } from './components/HelpBubble';
+import { LandingPage } from './components/LandingPage';
 import { ChatMessage } from './types';
 import { useEditorState } from './hooks/useEditorState';
 import { useProjectSystem } from './hooks/useProjectSystem';
@@ -79,7 +80,7 @@ function App() {
   const handleLogin = () => {
     if (window.google) {
       const client = window.google.accounts.oauth2.initTokenClient({
-        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '1046374102641-k4b39b036s5m2f78u499b2t05900r800.apps.googleusercontent.com', // Placeholder
+        client_id: process.env.GOOGLE_CLIENT_ID || '',
         scope: 'https://www.googleapis.com/auth/drive.file',
         callback: (response: any) => {
           if (response && response.access_token) {
@@ -369,7 +370,10 @@ function App() {
       </header>
 
       {/* MAIN */}
-      <main className="flex-1 flex overflow-hidden touch-none relative bg-gray-900" data-help="canvas-area">
+      {!accessToken ? (
+        <LandingPage onLogin={handleLogin} />
+      ) : (
+        <main className="flex-1 flex overflow-hidden touch-none relative bg-gray-900" data-help="canvas-area">
         <Toolbar 
           activeSidebar={activeSidebar}
           onClose={() => setActiveSidebar(null)}
@@ -534,7 +538,8 @@ function App() {
                 <Plus className="w-5 h-5" />
             </button>
         </div>
-      </main>
+        </main>
+      )}
     </div>
   );
 }
