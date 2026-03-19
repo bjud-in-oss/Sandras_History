@@ -1,4 +1,5 @@
 
+/// <reference types="vite/client" />
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Toolbar } from './components/Toolbar';
 import { CanvasWorkspace } from './components/CanvasWorkspace';
@@ -23,10 +24,20 @@ import {
   X,
   HelpCircle,
   Play,
-  Info
+  Info,
+  ChevronLeft,
+  ChevronRight,
+  Plus
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+
+// Add window.google type
+declare global {
+  interface Window {
+    google?: any;
+  }
+}
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -61,6 +72,26 @@ function App() {
   const [showWelcomeModal, setShowWelcomeModal] = useState(true);
   
   const [activeSidebar, setActiveSidebar] = useState<'MEDIA' | 'AI' | 'LAYERS' | 'CANVAS' | 'ARCHIVE' | null>(null);
+  
+  // Google Auth State
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+
+  const handleLogin = () => {
+    if (window.google) {
+      const client = window.google.accounts.oauth2.initTokenClient({
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '1046374102641-k4b39b036s5m2f78u499b2t05900r800.apps.googleusercontent.com', // Placeholder
+        scope: 'https://www.googleapis.com/auth/drive.file',
+        callback: (response: any) => {
+          if (response && response.access_token) {
+            setAccessToken(response.access_token);
+          }
+        },
+      });
+      client.requestAccessToken();
+    } else {
+      alert("Google Identity Services kunde inte laddas.");
+    }
+  };
   
   useEffect(() => {
     const handleGlobalClick = (e: MouseEvent) => {
@@ -127,7 +158,7 @@ function App() {
 
   // Hooks
   const { state, actions, canUndo, canRedo } = useEditorState(wakeUp);
-  const projectSystem = useProjectSystem(state, actions, canvasRef, wakeUp);
+  const projectSystem = useProjectSystem(state, actions, canvasRef, wakeUp, accessToken);
   
   useKeyboardShortcuts(state, actions);
   
@@ -216,6 +247,31 @@ function App() {
               <p>Ingen API-nyckel hittades i miljön (process.env.API_KEY).</p>
           </div>
       );
+  }
+
+  if (!accessToken) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen w-screen bg-gray-900 text-white gap-6 font-sans p-6">
+        <div className="bg-gray-800 border border-white/10 rounded-[32px] p-12 max-w-md w-full shadow-2xl space-y-8 text-center">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold tracking-tight text-white">Sandras Studio</h1>
+            <p className="text-gray-400 text-lg">Logga in för att spara dina projekt på Google Drive</p>
+          </div>
+          <button 
+            onClick={handleLogin}
+            className="w-full flex items-center justify-center gap-3 bg-white text-gray-900 hover:bg-gray-100 py-4 px-6 rounded-2xl font-bold transition-all active:scale-95 shadow-lg"
+          >
+            <svg className="w-6 h-6" viewBox="0 0 24 24">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            Logga in med Google
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -310,20 +366,6 @@ function App() {
                 <span className="hidden md:inline text-xs font-bold">Gör om</span>
             </button>
         </div>
-
-        {/* Page Navigation */}
-        <div className="flex items-center gap-2">
-            <button onClick={() => {
-                const idx = state.pages.findIndex(p => p.id === state.currentPageId);
-                if (idx > 0) actions.setCurrentPage(state.pages[idx - 1].id);
-            }} className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700">Föregående</button>
-            <span className="text-sm font-bold">{state.pages.findIndex(p => p.id === state.currentPageId) + 1} / {state.pages.length}</span>
-            <button onClick={() => {
-                const idx = state.pages.findIndex(p => p.id === state.currentPageId);
-                if (idx < state.pages.length - 1) actions.setCurrentPage(state.pages[idx + 1].id);
-            }} className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700">Nästa</button>
-            <button onClick={actions.addPage} className="p-2 bg-indigo-600 rounded-lg hover:bg-indigo-500">+</button>
-        </div>
       </header>
 
       {/* MAIN */}
@@ -366,6 +408,7 @@ function App() {
           onSetShowGrid={actions.setShowGrid}
           onSetSnapToGrid={actions.setSnapToGrid}
           onToggleOrientation={actions.toggleOrientation}
+          onLogout={() => setAccessToken(null)}
         />
         
         <CanvasWorkspace 
@@ -457,6 +500,40 @@ function App() {
                 </div>
             </div>
         )}
+
+        {/* BOTTOM PAGE NAVIGATION */}
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-gray-900/90 backdrop-blur-md border border-gray-800 px-4 py-2 rounded-full shadow-2xl z-40">
+            <button 
+                onClick={() => {
+                    const idx = state.pages.findIndex(p => p.id === state.currentPageId);
+                    if (idx > 0) actions.setCurrentPage(state.pages[idx - 1].id);
+                }} 
+                disabled={state.pages.findIndex(p => p.id === state.currentPageId) === 0}
+                className="p-2 bg-gray-800 text-gray-300 rounded-full hover:bg-gray-700 hover:text-white disabled:opacity-30 disabled:hover:bg-gray-800 transition-all"
+            >
+                <ChevronLeft className="w-5 h-5" />
+            </button>
+            <span className="text-sm font-bold min-w-[3rem] text-center">
+                {state.pages.findIndex(p => p.id === state.currentPageId) + 1} / {state.pages.length}
+            </span>
+            <button 
+                onClick={() => {
+                    const idx = state.pages.findIndex(p => p.id === state.currentPageId);
+                    if (idx < state.pages.length - 1) actions.setCurrentPage(state.pages[idx + 1].id);
+                }} 
+                disabled={state.pages.findIndex(p => p.id === state.currentPageId) === state.pages.length - 1}
+                className="p-2 bg-gray-800 text-gray-300 rounded-full hover:bg-gray-700 hover:text-white disabled:opacity-30 disabled:hover:bg-gray-800 transition-all"
+            >
+                <ChevronRight className="w-5 h-5" />
+            </button>
+            <div className="w-px h-6 bg-gray-700 mx-1"></div>
+            <button 
+                onClick={actions.addPage} 
+                className="p-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-500/20"
+            >
+                <Plus className="w-5 h-5" />
+            </button>
+        </div>
       </main>
     </div>
   );

@@ -15,7 +15,8 @@ import {
   Download,
   FolderOpen,
   Check,
-  RefreshCw
+  RefreshCw,
+  LogOut
 } from 'lucide-react';
 import { CANVAS_PRESETS } from '../constants/presets';
 
@@ -57,6 +58,7 @@ interface ToolbarProps {
   onSetShowGrid: (show: boolean) => void;
   onSetSnapToGrid: (snap: boolean) => void;
   onToggleOrientation: () => void;
+  onLogout: () => void;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({ 
@@ -90,7 +92,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onSetSize,
   onSetShowGrid,
   onSetSnapToGrid,
-  onToggleOrientation
+  onToggleOrientation,
+  onLogout
 }) => {
   const imageUploadRef = useRef<HTMLInputElement>(null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -422,6 +425,18 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 </button>
               </section>
             )}
+
+            <div className="h-px bg-gray-800 my-4"></div>
+            
+            <section className="space-y-2">
+              <button 
+                onClick={() => { onLogout(); onClose(); }} 
+                className="w-full text-left px-4 py-3 text-xs font-bold text-red-400 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 rounded-xl flex items-center gap-3 transition-all"
+              >
+                <LogOut className="w-4 h-4" />
+                Logga ut
+              </button>
+            </section>
           </div>
         )}
       </div>

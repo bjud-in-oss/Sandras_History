@@ -2,6 +2,7 @@
 import React, { RefObject, useState } from 'react';
 import { AppState, EditorElement, ImageElement, TextElement } from '../types';
 import { wrapText } from './useCanvasRender';
+import { saveProjectState, fetchProjectState } from '../services/driveService';
 
 interface ProjectSystemActions {
     loadState: (state: AppState) => void;
@@ -14,7 +15,8 @@ export const useProjectSystem = (
     state: AppState,
     actions: ProjectSystemActions,
     canvasRef: RefObject<HTMLCanvasElement>,
-    onInteraction: () => void
+    onInteraction: () => void,
+    accessToken: string | null
 ) => {
 
     // --- HELPER: Calculate Rotated Bounding Box ---
@@ -269,16 +271,26 @@ export const useProjectSystem = (
         }
     };
 
-    const handleSaveProject = () => {
+    const handleSaveProject = async () => {
         onInteraction();
-        const data = JSON.stringify(state);
-        const blob = new Blob([data], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `projekt-${Date.now()}.json`;
-        link.click();
-        setHasSaved(true);
+        if (!accessToken) {
+            alert("Du måste vara inloggad för att spara till Google Drive.");
+            return;
+        }
+        
+        try {
+            // Spara till Drive
+            const fileId = await saveProjectState(accessToken, state);
+            if (fileId) {
+                setHasSaved(true);
+                alert(`Projektet "${state.bookTitle}" har sparats till Google Drive!`);
+            } else {
+                alert("Ett fel uppstod när projektet skulle sparas.");
+            }
+        } catch (error) {
+            console.error("Kunde inte spara till Drive:", error);
+            alert("Ett fel uppstod när projektet skulle sparas.");
+        }
     };
 
     const handleQuickSave = () => {
