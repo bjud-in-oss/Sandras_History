@@ -6,6 +6,7 @@ import { CanvasWorkspace } from './components/CanvasWorkspace';
 import { PropertiesPanel } from './components/PropertiesPanel';
 import { HelpBubble } from './components/HelpBubble';
 import { LandingPage } from './components/LandingPage';
+import { DriveImagePicker } from './components/DriveImagePicker';
 import { ChatMessage } from './types';
 import { useEditorState } from './hooks/useEditorState';
 import { useProjectSystem } from './hooks/useProjectSystem';
@@ -71,6 +72,7 @@ function App() {
   const [latestContext, setLatestContext] = useState<{ text: string; image?: string; timestamp: number } | null>(null);
   const [isBubbleExpanded, setIsBubbleExpanded] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(true);
+  const [showDrivePicker, setShowDrivePicker] = useState(false);
   
   const [activeSidebar, setActiveSidebar] = useState<'MEDIA' | 'AI' | 'LAYERS' | 'CANVAS' | 'ARCHIVE' | null>(null);
   
@@ -395,6 +397,7 @@ function App() {
           onReorderElement={actions.reorderElement}
           onDeleteElement={actions.deleteElement}
           getSelectionImage={projectSystem.getSelectionAsBase64}
+          onOpenDrivePicker={() => setShowDrivePicker(true)}
           // Project system actions
           onQuickSave={projectSystem.handleQuickSave}
           onSaveProject={projectSystem.handleSaveProject}
@@ -414,6 +417,28 @@ function App() {
           onToggleOrientation={actions.toggleOrientation}
           onLogout={() => setAccessToken(null)}
         />
+
+        {showDrivePicker && (
+          <DriveImagePicker 
+            accessToken={accessToken || ''} 
+            onClose={() => setShowDrivePicker(false)}
+            onSelectImage={(blobUrl) => {
+              actions.addElement({
+                id: crypto.randomUUID(),
+                type: 'image',
+                x: 400,
+                y: 300,
+                rotation: 0,
+                width: 300,
+                height: 300,
+                src: blobUrl,
+                aspectRatio: 1,
+                constrainProportions: true
+              });
+              setShowDrivePicker(false);
+            }}
+          />
+        )}
         
         <CanvasWorkspace 
           elements={currentPage.elements}

@@ -59,6 +59,7 @@ interface ToolbarProps {
   onSetSnapToGrid: (snap: boolean) => void;
   onToggleOrientation: () => void;
   onLogout: () => void;
+  onOpenDrivePicker: () => void;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({ 
@@ -93,7 +94,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onSetShowGrid,
   onSetSnapToGrid,
   onToggleOrientation,
-  onLogout
+  onLogout,
+  onOpenDrivePicker
 }) => {
   const imageUploadRef = useRef<HTMLInputElement>(null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -229,6 +231,13 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                   <div>
                     <div className="text-sm font-bold">Ladda upp bild</div>
                     <div className="text-xs text-gray-500">JPG, PNG</div>
+                  </div>
+                </button>
+                <button onClick={onOpenDrivePicker} className="flex items-center gap-3 p-3 rounded-xl bg-gray-900 border border-gray-800 hover:border-indigo-500 hover:bg-gray-800 text-white shadow-sm text-left transition-all active:scale-95">
+                  <div className="w-8 h-8 rounded bg-indigo-500/20 flex items-center justify-center text-indigo-400"><FolderOpen className="w-5 h-5" /></div>
+                  <div>
+                    <div className="text-sm font-bold">Hämta från Drive</div>
+                    <div className="text-xs text-gray-500">Google Drive</div>
                   </div>
                 </button>
                 <input type="file" ref={imageUploadRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
